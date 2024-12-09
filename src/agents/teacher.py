@@ -1,5 +1,4 @@
 from typing import List, Optional
-
 from .base_agent import Agent
 from ..position import Position
 from ..enums import AgentState, CellType
@@ -12,15 +11,23 @@ class Teacher(Agent):
 
     def choose_move(self, classroom: 'Classroom') -> Optional[Position]:
         """Determines teacher's next move based on current situation"""
+        # If already escorting a child, focus on getting them to the safe zone
         if self.escorting_child:
             return self._escort_to_safe_zone(classroom)
+            
+        # Only look for new children if not currently escorting anyone
         return self._find_nearest_child_move(classroom)
 
     def _find_nearest_child_move(self, classroom: 'Classroom') -> Optional[Position]:
         """Finds best move to catch nearest free child"""
+        # Don't look for new children if already escorting one
+        if self.escorting_child:
+            return None
+            
         nearest_child = None
         min_distance = float('inf')
         
+        # Find the nearest free child
         for child in classroom.children:
             if child.state == AgentState.FREE:
                 distance = self.position.distance_to(child.position)
@@ -31,9 +38,13 @@ class Teacher(Agent):
         if not nearest_child:
             return None
             
-        if min_distance <= 1:
-            return Position(nearest_child.position.x, nearest_child.position.y)
+        # Only capture if we're in the same cell
+        if self.position == nearest_child.position:
+            nearest_child.state = AgentState.CAPTURED
+            self.escorting_child = nearest_child
+            return None
             
+        # Otherwise, move toward the child
         possible_moves = self._get_valid_moves(classroom)
         if not possible_moves:
             return None
@@ -46,18 +57,22 @@ class Teacher(Agent):
         if not self.escorting_child:
             return None
             
+        # Find nearest safe zone position
         nearest_safe = min(classroom.safe_zone,
                           key=lambda pos: self.position.distance_to(pos))
         
-        if self.position.distance_to(nearest_safe) <= 1:
+        # If we're at safe zone, release child
+        if self.position.distance_to(nearest_safe) == 0:  # Changed from <= 1 to == 0
             self.escorting_child.state = AgentState.FREE
             self.escorting_child = None
             return None
             
+        # Move toward safe zone
         possible_moves = self._get_valid_moves(classroom)
         if not possible_moves:
             return None
             
+        # Choose the move that gets us closest to the safe zone
         return min(possible_moves,
                   key=lambda pos: pos.distance_to(nearest_safe))
 
@@ -69,6 +84,6 @@ class Teacher(Agent):
             new_y = self.position.y + dy
             if (0 <= new_x < classroom.width and 
                 0 <= new_y < classroom.height and 
-                classroom.grid[new_y][new_x] in [CellType.EMPTY, CellType.CHILD]):
+                classroom.grid[new_y][new_x] == CellType.EMPTY):  # Only allow moving to empty cells
                 moves.append(Position(new_x, new_y))
         return moves

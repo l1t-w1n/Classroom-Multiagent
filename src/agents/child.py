@@ -47,30 +47,30 @@ class Child(Agent):
         for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
             new_x = self.position.x + dx
             new_y = self.position.y + dy
+            # Only allow moving to empty cells or cells with candy
             if (0 <= new_x < classroom.width and 
                 0 <= new_y < classroom.height and 
-                classroom.grid[new_y][new_x] == CellType.EMPTY):
+                classroom.grid[new_y][new_x] in [CellType.EMPTY, CellType.CANDY]):
                 moves.append(Position(new_x, new_y))
         return moves
 
     def _find_nearest_candy_move(self, classroom: 'Classroom', possible_moves: List[Position]) -> Position:
         """Finds move that brings child closest to nearest candy"""
-        nearest_candy = None
-        min_distance = float('inf')
-        
+        # Find candy locations
+        candies = []
         for y in range(classroom.height):
             for x in range(classroom.width):
                 if classroom.grid[y][x] == CellType.CANDY:
-                    candy_pos = Position(x, y)
-                    dist = self.position.distance_to(candy_pos)
-                    if dist < min_distance:
-                        min_distance = dist
-                        nearest_candy = candy_pos
-
-        if nearest_candy:
-            return min(possible_moves, 
-                      key=lambda pos: pos.distance_to(nearest_candy))
-        return random.choice(possible_moves)
+                    candies.append(Position(x, y))
+        
+        if not candies or not possible_moves:
+            return random.choice(possible_moves) if possible_moves else None
+            
+        # Find nearest candy
+        nearest_candy = min(candies, key=lambda candy: self.position.distance_to(candy))
+        
+        # Return the move that gets us closest to the nearest candy
+        return min(possible_moves, key=lambda pos: pos.distance_to(nearest_candy))
 
     def _find_safest_move(self, classroom: 'Classroom', possible_moves: List[Position]) -> Position:
         """Finds move that maximizes distance from teacher"""
