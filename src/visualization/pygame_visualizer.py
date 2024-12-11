@@ -1,61 +1,192 @@
 import pygame
+import math
 import sys
 from typing import Dict, Tuple
-from ..enums import CellType
+from ..enums import CellType, MovementStrategy
 from ..environment.classroom import Classroom
 
 class ClassroomVisualizer:
     """Handles the graphical visualization of the classroom simulation using Pygame"""
     
     def __init__(self, classroom: Classroom, cell_size: int = 40):
-        """
-        Initialize the visualization system.
-        
-        Args:
-            classroom: The classroom environment to visualize
-            cell_size: Size of each grid cell in pixels
-        """
         pygame.init()
         
-        # Calculate window dimensions based on grid size
+        # Calculate window dimensions with extra space for legend
+        self.classroom = classroom
         self.cell_size = cell_size
-        self.width = classroom.width * cell_size
-        self.height = classroom.height * cell_size
+        self.grid_width = classroom.width * cell_size
+        self.legend_width = 200  # Space for legend
+        self.width = self.grid_width + self.legend_width
+        self.height = max(classroom.height * cell_size, 400)
         
-        # Set up the display window
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Classroom Simulation")
         
-        # Define colors for different cell types
+        # Base colors for different cell types
         self.colors = {
             CellType.EMPTY: (255, 255, 255),     # White
             CellType.SAFE_ZONE: (200, 230, 200), # Light green
             CellType.CANDY: (255, 182, 193),     # Light pink
-            CellType.CHILD: (135, 206, 235),     # Sky blue
-            CellType.TEACHER: (255, 140, 0)      # Dark orange
+            CellType.TEACHER: (255, 140, 0),     # Dark orange
+            CellType.CHILD: (135, 206, 235)      # Default child color (sky blue)
         }
         
-        self.get_cell_color = lambda x, y, cell_type: (
-            self.colors[CellType.SAFE_ZONE] 
-            if any(x == sz.x and y == sz.y for sz in classroom.safe_zone)
-            else self.colors[cell_type]
-        )
-        
-        # For smooth animation
+        # Strategy-specific colors and shapes for children
+        self.strategy_styles = {
+            MovementStrategy.RANDOM_WALK: {
+                'color': (135, 206, 235),  # Sky blue
+                'shape': 'circle'
+            },
+            MovementStrategy.CANDY_SEEKER: {
+                'color': (255, 105, 180),  # Hot pink
+                'shape': 'triangle'
+            },
+            MovementStrategy.AVOIDANCE: {
+                'color': (50, 205, 50),    # Lime green
+                'shape': 'diamond'
+            },
+            MovementStrategy.DIRECTIONAL_BIAS: {
+                'color': (238, 130, 238),  # Violet
+                'shape': 'square'
+            },
+            MovementStrategy.STRATEGIC_TIMING: {
+                'color': (255, 215, 0),    # Gold
+                'shape': 'pentagon'
+            },
+            MovementStrategy.WALL_HUGGER: {
+                'color': (165, 42, 42),    # Brown
+                'shape': 'star'
+            },
+            MovementStrategy.GROUP_SEEKER: {
+                'color': (70, 130, 180),   # Steel blue
+                'shape': 'hexagon'
+            },
+            MovementStrategy.CANDY_HOARDER: {
+                'color': (255, 99, 71),    # Tomato
+                'shape': 'cross'
+            },
+            MovementStrategy.SAFE_EXPLORER: {
+                'color': (147, 112, 219),  # Medium purple
+                'shape': 'octagon'
+            },
+            MovementStrategy.UNPREDICTABLE: {
+                'color': (128, 128, 128),  # Gray
+                'shape': 'ring'
+            }
+        }
         self.clock = pygame.time.Clock()
-        self.FPS = 2
+        self.FPS = 10
+        
+    def get_cell_color(self, x: int, y: int, cell_type: CellType) -> Tuple[int, int, int]:
+        """
+        Determines the color for a cell based on its type and position.
+        Ensures safe zone cells maintain their color even when empty.
+        
+        Args:
+            x: X coordinate of the cell
+            y: Y coordinate of the cell
+            cell_type: Type of the cell (EMPTY, SAFE_ZONE, etc.)
+        
+        Returns:
+            Tuple of RGB values representing the cell's color
+        """
+        # Check if the cell is in the safe zone
+        is_safe_zone = any(x == sz.x and y == sz.y for sz in self.classroom.safe_zone)
+        
+        # If it's in safe zone, always return safe zone color
+        if is_safe_zone:
+            return self.colors[CellType.SAFE_ZONE]
+        
+        # Otherwise return the color for the cell type
+        return self.colors[cell_type]
+
+    # Complete the shape drawing methods by adding the missing shapes:
+    def draw_shape(self, surface, shape: str, center: Tuple[int, int], size: int, color: Tuple[int, int, int]):
+        """Draw different shapes based on strategy"""
+        x, y = center
+        if shape == 'circle':
+            pygame.draw.circle(surface, color, center, size//2)
+        elif shape == 'triangle':
+            points = [(x, y - size//2), (x - size//2, y + size//2), (x + size//2, y + size//2)]
+            pygame.draw.polygon(surface, color, points)
+        elif shape == 'diamond':
+            points = [(x, y - size//2), (x + size//2, y), (x, y + size//2), (x - size//2, y)]
+            pygame.draw.polygon(surface, color, points)
+        elif shape == 'square':
+            rect = pygame.Rect(x - size//2, y - size//2, size, size)
+            pygame.draw.rect(surface, color, rect)
+        elif shape == 'pentagon':
+            points = [(x, y - size//2), (x + size//2, y - size//6), 
+                     (x + size//3, y + size//2), (x - size//3, y + size//2),
+                     (x - size//2, y - size//6)]
+            pygame.draw.polygon(surface, color, points)
+        elif shape == 'star':
+            # Draw a five-pointed star
+            points = []
+            for i in range(5):
+                # Outer points
+                angle = -90 + i * 72  # Start from top, go clockwise
+                rad = math.radians(angle)
+                points.append((x + size//2 * math.cos(rad), y + size//2 * math.sin(rad)))
+                # Inner points
+                angle += 36
+                rad = math.radians(angle)
+                points.append((x + size//4 * math.cos(rad), y + size//4 * math.sin(rad)))
+            pygame.draw.polygon(surface, color, points)
+        elif shape == 'hexagon':
+            points = []
+            for i in range(6):
+                angle = i * 60
+                rad = math.radians(angle)
+                points.append((x + size//2 * math.cos(rad), y + size//2 * math.sin(rad)))
+            pygame.draw.polygon(surface, color, points)
+        elif shape == 'cross':
+            # Draw a plus sign
+            pygame.draw.rect(surface, color, (x - size//6, y - size//2, size//3, size))
+            pygame.draw.rect(surface, color, (x - size//2, y - size//6, size, size//3))
+        elif shape == 'octagon':
+            points = []
+            for i in range(8):
+                angle = i * 45
+                rad = math.radians(angle)
+                points.append((x + size//2 * math.cos(rad), y + size//2 * math.sin(rad)))
+            pygame.draw.polygon(surface, color, points)
+        elif shape == 'ring':
+            pygame.draw.circle(surface, color, center, size//2)      # Outer circle
+            pygame.draw.circle(surface, (240, 240, 240), center, size//3)  # Inner circle (creates ring effect)
+
+    def draw_legend(self):
+        """Draw legend showing different strategies"""
+        legend_x = self.grid_width + 10
+        legend_y = 10
+        font = pygame.font.Font(None, 24)
+        
+        # Draw legend title
+        title = font.render("Strategy Legend", True, (0, 0, 0))
+        self.screen.blit(title, (legend_x, legend_y))
+        legend_y += 30
+        
+        # Draw each strategy in legend
+        for strategy in MovementStrategy:
+            style = self.strategy_styles[strategy]
+            # Draw strategy shape
+            self.draw_shape(self.screen, style['shape'], 
+                          (legend_x + 15, legend_y + 10), 
+                          20, style['color'])
+            # Draw strategy name
+            text = font.render(strategy.name.replace('_', ' ').title(), 
+                             True, (0, 0, 0))
+            self.screen.blit(text, (legend_x + 35, legend_y))
+            legend_y += 25
 
     def draw_grid(self, classroom: Classroom):
-        """
-        Draw the classroom grid with all its elements, ensuring safe zone
-        remains visible even when empty.
-        """
+        """Draw the classroom grid with strategy-specific child representations"""
         self.screen.fill((240, 240, 240))
         
+        # Draw grid cells
         for y in range(classroom.height):
             for x in range(classroom.width):
                 cell_type = classroom.grid[y][x]
-                # Get the appropriate color, considering safe zone position
                 color = self.get_cell_color(x, y, cell_type)
                 
                 rect = pygame.Rect(
@@ -68,26 +199,34 @@ class ClassroomVisualizer:
                 pygame.draw.rect(self.screen, color, rect)
                 pygame.draw.rect(self.screen, (200, 200, 200), rect, 1)
                 
-                # Draw agent indicators as before
-                if cell_type in [CellType.CHILD, CellType.TEACHER]:
-                    center = (
-                        x * self.cell_size + self.cell_size // 2,
-                        y * self.cell_size + self.cell_size // 2
-                    )
-                    radius = self.cell_size // 3
-                    pygame.draw.circle(self.screen, (0, 0, 0), center, radius)
+                center = (
+                    x * self.cell_size + self.cell_size // 2,
+                    y * self.cell_size + self.cell_size // 2
+                )
+                
+                if cell_type == CellType.TEACHER:
+                    pygame.draw.circle(self.screen, self.colors[CellType.TEACHER], 
+                                    center, self.cell_size // 3)
+                elif cell_type == CellType.CHILD:
+                    # Find the child at this position
+                    for child in classroom.children:
+                        if child.position.x == x and child.position.y == y:
+                            style = self.strategy_styles[child.strategy]
+                            self.draw_shape(self.screen, style['shape'], center,
+                                          self.cell_size // 2, style['color'])
+                            break
                 elif cell_type == CellType.CANDY:
-                    # Draw a diamond shape for candy
-                    center_x = x * self.cell_size + self.cell_size // 2
-                    center_y = y * self.cell_size + self.cell_size // 2
                     size = self.cell_size // 3
                     points = [
-                        (center_x, center_y - size),  # Top
-                        (center_x + size, center_y),  # Right
-                        (center_x, center_y + size),  # Bottom
-                        (center_x - size, center_y)   # Left
+                        (center[0], center[1] - size),
+                        (center[0] + size, center[1]),
+                        (center[0], center[1] + size),
+                        (center[0] - size, center[1])
                     ]
                     pygame.draw.polygon(self.screen, (255, 0, 0), points)
+        
+        # Draw legend
+        self.draw_legend()
 
     def show_status(self, classroom: Classroom):
         """

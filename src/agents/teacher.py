@@ -1,14 +1,25 @@
 from typing import List, Optional
 from .base_agent import Agent
 from ..position import Position
-from ..enums import AgentState, CellType
+from ..enums import AgentState, CellType, MovementStrategy
 
 class Teacher(Agent):
     """Represents the teacher agent in the simulation"""
     def __init__(self, position: Position):
         super().__init__(position)
-        # Removed escorting_child since we're not using it anymore
-
+        # Define strategy priority (highest to lowest)
+        self.strategy_priority = [
+            MovementStrategy.AVOIDANCE,      # Catch avoiders first
+            MovementStrategy.DIRECTIONAL_BIAS,# Then predictable movers
+            MovementStrategy.CANDY_SEEKER,    # Then candy seekers
+            MovementStrategy.WALL_HUGGER,     # Then wall huggers
+            MovementStrategy.GROUP_SEEKER,    # Then group seekers
+            MovementStrategy.CANDY_HOARDER,   # Then hoarders
+            MovementStrategy.SAFE_EXPLORER,   # Then explorers
+            MovementStrategy.STRATEGIC_TIMING,# Then strategic timers
+            MovementStrategy.RANDOM_WALK,     # Then random walkers
+            MovementStrategy.UNPREDICTABLE    # Finally unpredictable ones
+        ]
     def is_adjacent_to(self, other_pos: Position) -> bool:
         """
         Determines if another position is adjacent to the teacher, including diagonal positions.
@@ -49,54 +60,46 @@ class Teacher(Agent):
         return self._find_nearest_child_move(classroom)
 
     def _find_nearest_child_move(self, classroom: 'Classroom') -> Optional[Position]:
-        """
-        Finds and moves toward the nearest eligible child. When adjacent,
-        immediately teleports the child to the safe zone.
-        """
-        nearest_child = None
+        target_child = None
         min_distance = float('inf')
         
-        # Find the nearest eligible child (free and outside safe zone)
-        for child in classroom.children:
-            # Check if child is outside safe zone
-            is_in_safe_zone = any(
-                safe_pos.x == child.position.x and safe_pos.y == child.position.y
-                for safe_pos in classroom.safe_zone
-            )
+        # Check each strategy in priority order
+        for priority_strategy in self.strategy_priority:
+            nearest_for_strategy = None
+            min_distance_for_strategy = float('inf')
             
-            # Only consider free children outside the safe zone that can move
-            if child.state == AgentState.FREE and not is_in_safe_zone and child.can_move():
-                distance = self.position.distance_to(child.position)
-                if distance < min_distance:
-                    min_distance = distance
-                    nearest_child = child
+            # Look for children with current strategy
+            for child in classroom.children:
+                if (child.state == AgentState.FREE and 
+                    child.strategy == priority_strategy and 
+                    child.can_move() and 
+                    not any(safe_pos.x == child.position.x and 
+                           safe_pos.y == child.position.y 
+                           for safe_pos in classroom.safe_zone)):
+                    
+                    distance = self.position.distance_to(child.position)
+                    if distance < min_distance_for_strategy:
+                        min_distance_for_strategy = distance
+                        nearest_for_strategy = child
+            
+            # If we found a child with this strategy, they become our target
+            if nearest_for_strategy:
+                target_child = nearest_for_strategy
+                break
         
-        if not nearest_child:
+        if not target_child:
             return None
             
-        # If adjacent to a child, teleport them to the safe zone
-        if self.is_adjacent_to(nearest_child.position):
-            # Find the nearest safe zone position
-            nearest_safe = min(classroom.safe_zone,
-                             key=lambda pos: nearest_child.position.distance_to(pos))
-            
-            # Update grid and teleport child
-            classroom.grid[nearest_child.position.y][nearest_child.position.x] = CellType.EMPTY
-            classroom.grid[nearest_safe.y][nearest_safe.x] = CellType.CHILD
-            nearest_child.position = nearest_safe
-            
-            # Apply cooldown to the child
-            nearest_child.set_cooldown(5.0)  # 5 second cooldown
+        # Handle movement toward target child as before...
+        if self.is_adjacent_to(target_child.position):
             return None
             
-        # Move toward the child if not adjacent
         possible_moves = self._get_valid_moves(classroom)
         if not possible_moves:
             return None
             
-        # Choose the move that gets us closest to the target child
         return min(possible_moves,
-                  key=lambda pos: pos.distance_to(nearest_child.position))
+                  key=lambda pos: pos.distance_to(target_child.position))
 
     def _get_valid_moves(self, classroom: 'Classroom') -> List[Position]:
         """Returns list of valid positions the teacher can move to"""

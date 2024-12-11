@@ -12,21 +12,110 @@ class Child(Agent):
     movement strategy and can be temporarily immobilized by cooldown.
     """
     def __init__(self, position: Position, strategy: MovementStrategy):
-        """
-        Initializes a new child agent with a specific position and movement strategy.
-        
-        Args:
-            position: The starting position in the classroom grid
-            strategy: The movement strategy this child will use
-        """
         super().__init__(position)
         self.strategy = strategy
         self.state = AgentState.FREE
-        self.cooldown_until = 0  # Timestamp when cooldown expires
+        self.cooldown_until = 0
         self.last_move_time = time.time()
-        self.move_cooldown = random.uniform(0.5, 2.0)  # Random delay between moves
-        # For directional bias strategy
+        self.move_cooldown = random.uniform(0.5, 2.0)
         self.preferred_direction = random.choice([(0, 1), (1, 0), (0, -1), (-1, 0)])
+        # For unpredictable strategy
+        self.current_substrategy = MovementStrategy.RANDOM_WALK
+        self.strategy_switch_time = time.time() + random.uniform(5.0, 10.0)
+
+    def choose_move(self, classroom: 'Classroom') -> Optional[Position]:
+        if not self.can_move():
+            return None
+
+        current_time = time.time()
+        if self.strategy == MovementStrategy.STRATEGIC_TIMING:
+            if current_time - self.last_move_time < self.move_cooldown:
+                return None
+
+        possible_moves = self._get_valid_moves(classroom)
+        if not possible_moves:
+            return None
+
+        self.last_move_time = current_time
+
+        # Handle strategy selection
+        if self.strategy == MovementStrategy.UNPREDICTABLE:
+            if current_time >= self.strategy_switch_time:
+                self.current_substrategy = random.choice([
+                    strat for strat in MovementStrategy 
+                    if strat != MovementStrategy.UNPREDICTABLE
+                ])
+                self.strategy_switch_time = current_time + random.uniform(5.0, 10.0)
+            return self._execute_strategy(self.current_substrategy, classroom, possible_moves)
+
+        return self._execute_strategy(self.strategy, classroom, possible_moves)
+
+    def _execute_strategy(self, strategy: MovementStrategy, classroom: 'Classroom', 
+                         possible_moves: List[Position]) -> Optional[Position]:
+        """Execute the specified movement strategy"""
+        strategy_map = {
+            MovementStrategy.RANDOM_WALK: lambda: random.choice(possible_moves),
+            MovementStrategy.CANDY_SEEKER: lambda: self._find_nearest_candy_move(classroom, possible_moves),
+            MovementStrategy.AVOIDANCE: lambda: self._find_safest_move(classroom, possible_moves),
+            MovementStrategy.DIRECTIONAL_BIAS: lambda: self._find_directional_move(possible_moves),
+            MovementStrategy.WALL_HUGGER: lambda: self._find_wall_hugging_move(classroom, possible_moves),
+            MovementStrategy.GROUP_SEEKER: lambda: self._find_group_move(classroom, possible_moves),
+            MovementStrategy.CANDY_HOARDER: lambda: self._find_candy_rich_area_move(classroom, possible_moves),
+            MovementStrategy.SAFE_EXPLORER: lambda: self._find_safe_exploration_move(classroom, possible_moves)
+        }
+        return strategy_map.get(strategy, lambda: random.choice(possible_moves))()
+
+    def _find_wall_hugging_move(self, classroom: 'Classroom', possible_moves: List[Position]) -> Position:
+        """Prefers moves that keep the child close to classroom walls"""
+        def wall_score(pos: Position) -> float:
+            # High score for positions next to walls
+            wall_proximity = min(
+                pos.x, pos.y,
+                classroom.width - 1 - pos.x,
+                classroom.height - 1 - pos.y
+            )
+            return -wall_proximity  # Negative because we want to minimize distance to walls
+
+        return max(possible_moves, key=wall_score)
+
+    def _find_group_move(self, classroom: 'Classroom', possible_moves: List[Position]) -> Position:
+        """Moves toward the largest group of other children"""
+        def count_nearby_children(pos: Position, radius: int = 3) -> int:
+            count = 0
+            for child in classroom.children:
+                if child != self and child.state == AgentState.FREE:
+                    if pos.distance_to(child.position) <= radius:
+                        count += 1
+            return count
+
+        return max(possible_moves, key=count_nearby_children)
+
+    def _find_candy_rich_area_move(self, classroom: 'Classroom', possible_moves: List[Position]) -> Position:
+        """Moves toward areas with multiple candies"""
+        def candy_density_score(pos: Position, radius: int = 3) -> int:
+            count = 0
+            for y in range(max(0, pos.y - radius), min(classroom.height, pos.y + radius + 1)):
+                for x in range(max(0, pos.x - radius), min(classroom.width, pos.x + radius + 1)):
+                    if classroom.grid[y][x] == CellType.CANDY:
+                        count += 1
+            return count
+
+        return max(possible_moves, key=candy_density_score)
+
+    def _find_safe_exploration_move(self, classroom: 'Classroom', possible_moves: List[Position]) -> Position:
+        """Alternates between staying near safe zone and exploring"""
+        time_since_cooldown = time.time() - self.cooldown_until
+        exploration_phase = (time_since_cooldown % 20) > 10  # Switch every 10 seconds
+        
+        if exploration_phase:
+            # During exploration, behave like a candy seeker
+            return self._find_nearest_candy_move(classroom, possible_moves)
+        else:
+            # During safe phase, stay closer to safe zone
+            nearest_safe = min(classroom.safe_zone,
+                             key=lambda pos: self.position.distance_to(pos))
+            return min(possible_moves,
+                      key=lambda pos: pos.distance_to(nearest_safe))
 
     def set_cooldown(self, duration: float):
         """

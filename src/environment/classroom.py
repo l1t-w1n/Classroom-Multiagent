@@ -32,7 +32,7 @@ class Classroom:
         self.children: List[Child] = []
         self.teacher: Optional[Teacher] = None
         self.last_candy_spawn = time.time()
-        self.candy_spawn_interval = 10
+        self.candy_spawn_interval = 3
 
     def _initialize_safe_zone(self, size: Tuple[int, int]) -> List[Position]:
         """
@@ -73,53 +73,73 @@ class Classroom:
     def update(self):
         """
         Main simulation step that updates all agents and environment.
-        Handles candy spawning, child movement, candy collection,
-        and teacher movement with child teleportation.
+        The teacher gets two movement opportunities per update cycle,
+        while children only get one, making the teacher move twice as fast.
         """
         self.spawn_candy()
         
-        # First, handle teacher movement and potential teleportation
+        # First teacher movement opportunity
         if self.teacher:
-            # Check if teacher is adjacent to any child before moving
-            for child in self.children:
-                if child.can_move() and self.teacher.is_adjacent_to(child.position):
-                    # Find nearest safe zone position
-                    nearest_safe = min(self.safe_zone,
-                                    key=lambda pos: child.position.distance_to(pos))
-                    
-                    # Clear child's old position
-                    self.grid[child.position.y][child.position.x] = CellType.EMPTY
-                    
-                    # Move child to safe zone
-                    child.position = nearest_safe
-                    self.grid[nearest_safe.y][nearest_safe.x] = CellType.CHILD
-                    
-                    # Set cooldown on the child
-                    child.set_cooldown(10.0)
-                    
-                    # Don't process teacher movement this turn
-                    break
-            else:  # Only move teacher if no adjacent children were found
-                new_position = self.teacher.choose_move(self)
-                if new_position:
-                    self.grid[self.teacher.position.y][self.teacher.position.x] = CellType.EMPTY
-                    self.teacher.move(new_position)
-                    self.grid[new_position.y][new_position.x] = CellType.TEACHER
-        
-        # Then update children that aren't in cooldown
+            self._process_teacher_movement()
+
+        # Children movement
         for child in self.children:
             if child.can_move():
                 new_position = child.choose_move(self)
                 if new_position:
-                    # Collect candy if present at new position
+                    # Handle candy collection
                     if self.grid[new_position.y][new_position.x] == CellType.CANDY:
                         self.grid[new_position.y][new_position.x] = CellType.EMPTY
                     
-                    # Update child's position
-                    self.grid[child.position.y][child.position.x] = CellType.EMPTY
+                    # Update child's position while preserving safe zone
+                    old_x, old_y = child.position.x, child.position.y
+                    self.grid[old_y][old_x] = (CellType.SAFE_ZONE 
+                        if any(old_x == sz.x and old_y == sz.y for sz in self.safe_zone)
+                        else CellType.EMPTY)
                     child.move(new_position)
                     self.grid[new_position.y][new_position.x] = CellType.CHILD
 
+        # Second teacher movement opportunity
+        if self.teacher:
+            self._process_teacher_movement()
+
+    def _process_teacher_movement(self):
+        """
+        Helper method to handle teacher movement and child teleportation.
+        This is extracted into a separate method since we call it twice per update.
+        """
+        # Check for adjacent children first
+        for child in self.children:
+            if child.can_move() and self.teacher.is_adjacent_to(child.position):
+                # Find nearest safe zone position
+                nearest_safe = min(self.safe_zone,
+                                key=lambda pos: child.position.distance_to(pos))
+                
+                # Update grid, preserving safe zone status
+                old_x, old_y = child.position.x, child.position.y
+                self.grid[old_y][old_x] = (CellType.SAFE_ZONE 
+                    if any(old_x == sz.x and old_y == sz.y for sz in self.safe_zone)
+                    else CellType.EMPTY)
+                
+                # Teleport child and apply cooldown
+                child.position = nearest_safe
+                self.grid[nearest_safe.y][nearest_safe.x] = CellType.CHILD
+                child.set_cooldown(4.0)
+                return  # Exit after handling one teleportation
+        
+        # If no teleportation occurred, try to move teacher
+        new_position = self.teacher.choose_move(self)
+        if new_position:
+            # Update teacher position while preserving safe zone
+            old_x, old_y = self.teacher.position.x, self.teacher.position.y  # Fixed this line
+            self.grid[old_y][old_x] = (CellType.SAFE_ZONE 
+                if any(old_x == sz.x and old_y == sz.y for sz in self.safe_zone)
+                else CellType.EMPTY)
+            
+            self.teacher.move(new_position)
+            self.grid[new_position.y][new_position.x] = CellType.TEACHER
+            
+            
     def print_state(self):
         """
         Prints a text representation of the current classroom state.

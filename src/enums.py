@@ -15,8 +15,15 @@ class AgentState(Enum):
 
 class MovementStrategy(Enum):
     """Different movement strategies that child agents can employ"""
-    STRATEGIC_TIMING = 0  # Moves at specific time intervals
-    AVOIDANCE = 1        # Tries to stay away from the teacher
-    DIRECTIONAL_BIAS = 2  # Prefers moving in certain directions
-    RANDOM_WALK = 3      # Moves randomly
-    CANDY_SEEKER = 4     # Actively seeks out candy
+    RANDOM_WALK = 0      # Original: Moves randomly
+    CANDY_SEEKER = 1     # Original: Moves toward nearest candy
+    AVOIDANCE = 2        # Original: Stays away from teacher
+    DIRECTIONAL_BIAS = 3 # Original: Prefers specific directions
+    STRATEGIC_TIMING = 4 # Original: Moves at specific intervals
+    
+    # New strategies
+    WALL_HUGGER = 5      # Stays close to classroom walls for safety
+    GROUP_SEEKER = 6     # Tries to stay close to other children
+    CANDY_HOARDER = 7    # Focuses on areas with multiple candies
+    SAFE_EXPLORER = 8    # Alternates between safe zone and exploration
+    UNPREDICTABLE = 9    # Randomly switches between different strategies
