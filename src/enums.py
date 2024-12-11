@@ -12,7 +12,6 @@ class CellType(Enum):
 class AgentState(Enum):
     """Represents the possible states a child agent can be in"""
     FREE = 0       # Child is free to move and collect candy
-    CAPTURED = 1   # Child has been caught by teacher and is being escorted
 
 class MovementStrategy(Enum):
     """Different movement strategies that child agents can employ"""

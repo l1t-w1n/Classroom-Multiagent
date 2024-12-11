@@ -35,27 +35,29 @@ class ClassroomVisualizer:
             CellType.TEACHER: (255, 140, 0)      # Dark orange
         }
         
+        self.get_cell_color = lambda x, y, cell_type: (
+            self.colors[CellType.SAFE_ZONE] 
+            if any(x == sz.x and y == sz.y for sz in classroom.safe_zone)
+            else self.colors[cell_type]
+        )
+        
         # For smooth animation
         self.clock = pygame.time.Clock()
         self.FPS = 2
 
     def draw_grid(self, classroom: Classroom):
         """
-        Draw the classroom grid with all its elements.
-        
-        Args:
-            classroom: Current state of the classroom to render
+        Draw the classroom grid with all its elements, ensuring safe zone
+        remains visible even when empty.
         """
-        # Fill background
-        self.screen.fill((240, 240, 240))  # Light gray background
+        self.screen.fill((240, 240, 240))
         
-        # Draw each cell
         for y in range(classroom.height):
             for x in range(classroom.width):
                 cell_type = classroom.grid[y][x]
-                color = self.colors[cell_type]
+                # Get the appropriate color, considering safe zone position
+                color = self.get_cell_color(x, y, cell_type)
                 
-                # Calculate pixel coordinates
                 rect = pygame.Rect(
                     x * self.cell_size,
                     y * self.cell_size,
@@ -63,13 +65,11 @@ class ClassroomVisualizer:
                     self.cell_size
                 )
                 
-                # Draw cell
                 pygame.draw.rect(self.screen, color, rect)
-                pygame.draw.rect(self.screen, (200, 200, 200), rect, 1)  # Grid lines
+                pygame.draw.rect(self.screen, (200, 200, 200), rect, 1)
                 
-                # Add visual indicators for agents
+                # Draw agent indicators as before
                 if cell_type in [CellType.CHILD, CellType.TEACHER]:
-                    # Draw a circle inside the cell
                     center = (
                         x * self.cell_size + self.cell_size // 2,
                         y * self.cell_size + self.cell_size // 2
@@ -91,27 +91,23 @@ class ClassroomVisualizer:
 
     def show_status(self, classroom: Classroom):
         """
-        Display simulation statistics on screen.
-        
-        Args:
-            classroom: Current classroom state
+        Display simulation statistics on screen, now with updated terminology
+        to better reflect the cooldown mechanic.
         """
-        # Create a font object
         font = pygame.font.Font(None, 24)
         
-        # Count various elements
-        free_children = sum(1 for child in classroom.children if child.state.FREE)
-        captured_children = len(classroom.children) - free_children
+        # Update how we count children's states
+        active_children = sum(1 for child in classroom.children if child.can_move())
+        on_cooldown = len(classroom.children) - active_children
         candies = sum(1 for row in classroom.grid for cell in row if cell == CellType.CANDY)
         
-        # Create status text
+        # Updated status text with new terminology
         status_lines = [
-            f"Free Children: {free_children}",
-            f"Captured: {captured_children}",
+            f"Active Children: {active_children}",
+            f"On Cooldown: {on_cooldown}",
             f"Candies: {candies}"
         ]
         
-        # Render each line
         for i, line in enumerate(status_lines):
             text = font.render(line, True, (0, 0, 0))
             self.screen.blit(text, (10, 10 + i * 25))

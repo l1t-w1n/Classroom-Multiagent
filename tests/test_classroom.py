@@ -2,11 +2,11 @@ import unittest
 import time
 from unittest.mock import Mock
 
-from src.position import Position
-from src.enums import CellType, AgentState, MovementStrategy
-from src.agents.child import Child
-from src.agents.teacher import Teacher
-from src.environment.classroom import Classroom
+from ..src.position import Position
+from ..src.enums import CellType, AgentState, MovementStrategy
+from ..src.agents.child import Child
+from ..src.agents.teacher import Teacher
+from ..src.environment.classroom import Classroom
 
 class TestPosition(unittest.TestCase):
     """Test cases for the Position class functionality"""
