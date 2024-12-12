@@ -51,7 +51,7 @@ This project implements a complex, reactive multi-agent system simulating the dy
 
    ```
    git clone https://github.com/l1t-w1n/Classroom-Multiagent.git
-   cd classroom-simulation
+   cd classroom-multiagent
    ```
 
 2. (Optional) Create a virtual environment:
@@ -108,7 +108,7 @@ All tests should pass if the simulation is working correctly. If any tests fail,
 The project's codebase is organized into the following directory structure:
 
 ```
-classroom-simulation/
+classroom-multiagent/
 │
 ├── src/
 │   ├── agents/
