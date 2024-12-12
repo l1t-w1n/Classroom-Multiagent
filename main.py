@@ -189,44 +189,95 @@ def create_teacher_positions(config: ConfigManager) -> List[Tuple[int, int]]:
     
     return teacher_positions
 
+def distribute_teachers(config: ConfigManager) -> List[Tuple[int, int]]:
+    """
+    Creates optimal starting positions for teachers to provide balanced coverage.
+    For multiple teachers, ensures they're spread out to cover different areas.
+    """
+    width, height = config.classroom_size
+    num_teachers = config.agent_counts['num_teachers']
+    teacher_positions = []
+    
+    if num_teachers == 1:
+        # Single teacher starts in center for balanced coverage
+        teacher_positions.append((width // 2, height // 2))
+    else:
+        # Multiple teachers are distributed to cover different quadrants
+        positions = [
+            (width // 3, height // 3),        # Upper left
+            (2 * width // 3, 2 * height // 3), # Lower right
+            (width // 3, 2 * height // 3),     # Lower left
+            (2 * width // 3, height // 3)      # Upper right
+        ]
+        # Add teachers up to the requested number
+        for i in range(min(num_teachers, len(positions))):
+            teacher_positions.append(positions[i])
+    
+    return teacher_positions
+
+def distribute_teachers(config: ConfigManager) -> List[Tuple[int, int, Tuple[int, int, int, int]]]:
+    width, height = config.classroom_size
+    num_teachers = config.agent_counts['num_teachers']
+    teacher_configs = []
+
+    zones = [
+        [(0, width, 0, height)],  # Single teacher, whole classroom
+        [(0, width // 2, 0, height), (width // 2, width, 0, height)],  # Two teachers, left/right halves
+        [(0, width // 2, 0, height // 2), (width // 2, width, 0, height // 2), (0, width, height // 2, height)],  # Three teachers, top-left/top-right/bottom
+        [(0, width // 2, 0, height // 2), (width // 2, width, 0, height // 2), (0, width // 2, height // 2, height), (width // 2, width, height // 2, height)]  # Four teachers, quadrants
+    ]
+
+    for i in range(min(num_teachers, len(zones))):
+        x = (zones[num_teachers - 1][i][0] + zones[num_teachers - 1][i][1]) // 2
+        y = (zones[num_teachers - 1][i][2] + zones[num_teachers - 1][i][3]) // 2
+        zone = zones[num_teachers - 1][i]
+        teacher_configs.append((x, y, zone))
+
+    return teacher_configs
+
 def main():
-    # Load and initialize configuration
+    """
+    Sets up and runs the classroom simulation with configured parameters.
+    Handles agent creation, placement, and main simulation loop.
+    """
+    # Initialize configuration and environment
     config = ConfigManager()
     
-    # Create classroom environment
     classroom = Classroom(
         width=config.classroom_size[0],
         height=config.classroom_size[1],
         safe_zone_size=config.safe_zone_size
     )
     
-    # Add teachers
-    teacher_positions = create_teacher_positions(config)
-    for x, y in teacher_positions:
-        teacher = Teacher(Position(x, y))
-        classroom.teacher = teacher  # Note: Currently supports only one teacher
+    # Create and place teachers
+    teacher_configs = distribute_teachers(config)
+    for x, y, zone in teacher_configs:
+        teacher = Teacher(Position(x, y), zone)
+        classroom.teachers.append(teacher)
         classroom.grid[y][x] = CellType.TEACHER
-    
-    # Add children with their strategies
+        
+    # Create and place children with their strategies
     child_configs = create_child_positions(config)
     for x, y, strategy in child_configs:
         child = Child(Position(x, y), strategy)
         classroom.children.append(child)
         classroom.grid[y][x] = CellType.CHILD
     
-    # Create visualization system
+    # Initialize visualization
     visualizer = ClassroomVisualizer(classroom, cell_size=config.cell_size)
     
-    # Main simulation loop
+    # Main simulation loop with error handling
     try:
         running = True
         while running:
             classroom.update()
             running = visualizer.update(classroom)
+            
     except KeyboardInterrupt:
         print("\nSimulation stopped by user.")
     except Exception as e:
         print(f"\nError during simulation: {str(e)}")
+        raise  # Re-raise the exception for debugging
     finally:
         visualizer.cleanup()
 

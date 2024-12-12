@@ -3,6 +3,7 @@ import math
 import sys
 from typing import Dict, Tuple
 from ..enums import CellType, MovementStrategy
+from ..config.config_manager import ConfigManager
 from ..environment.classroom import Classroom
 
 class ClassroomVisualizer:
@@ -11,16 +12,18 @@ class ClassroomVisualizer:
     def __init__(self, classroom: Classroom, cell_size: int = 40):
         pygame.init()
         
-        # Calculate window dimensions with extra space for legend
+        # Store reference to classroom for accessing safe zone
         self.classroom = classroom
         self.cell_size = cell_size
         self.grid_width = classroom.width * cell_size
-        self.legend_width = 200  # Space for legend
+        
+        # Increase legend width to accommodate additional information
+        self.legend_width = 250  # Made wider for teacher count
         self.width = self.grid_width + self.legend_width
         self.height = max(classroom.height * cell_size, 400)
         
         self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("Classroom Simulation")
+        pygame.display.set_caption("Multi-Teacher Classroom Simulation")
         
         # Base colors for different cell types
         self.colors = {
@@ -74,8 +77,94 @@ class ClassroomVisualizer:
                 'shape': 'ring'
             }
         }
+        self.config = ConfigManager()
         self.clock = pygame.time.Clock()
-        self.FPS = 10
+        self.FPS = self.config.fps
+        
+    def draw_right_panel(self):
+        """
+        Draws the complete right panel including status counters and strategy legend.
+        Organizes information in a clear, hierarchical way.
+        """
+        legend_x = self.grid_width + 10
+        legend_y = 10
+        font = pygame.font.Font(None, 24)
+        
+        # First, draw a panel background for better visibility
+        panel_rect = pygame.Rect(self.grid_width, 0, self.legend_width, self.height)
+        pygame.draw.rect(self.screen, (220, 220, 220), panel_rect)
+        
+        # Draw title for Statistics section
+        title = font.render("Simulation Statistics", True, (0, 0, 0))
+        self.screen.blit(title, (legend_x, legend_y))
+        legend_y += 30
+        
+        # Calculate statistics
+        active_children = sum(1 for child in self.classroom.children if child.can_move())
+        on_cooldown = len(self.classroom.children) - active_children
+        candies = sum(1 for row in self.classroom.grid 
+                    for cell in row if cell == CellType.CANDY)
+        
+        # Count children by strategy
+        strategy_counts = {}
+        for strategy in MovementStrategy:
+            strategy_counts[strategy] = 0
+        for child in self.classroom.children:
+            strategy_counts[child.strategy] += 1
+        
+        # Draw main statistics with enhanced visibility
+        stats_lines = [
+            ("Total Children", len(self.classroom.children)),
+            ("Active Children", active_children),
+            ("On Cooldown", on_cooldown),
+            ("Active Teachers", len(self.classroom.teachers)),
+            ("Current Candies", candies)
+        ]
+        
+        # Draw each statistic line
+        for label, value in stats_lines:
+            # Draw background highlight for better readability
+            highlight_rect = pygame.Rect(legend_x - 5, legend_y - 2, 
+                                    self.legend_width - 10, 25)
+            pygame.draw.rect(self.screen, (200, 200, 200), highlight_rect)
+            
+            # Draw the statistics text
+            text = font.render(f"{label}: {value}", True, (0, 0, 0))
+            self.screen.blit(text, (legend_x, legend_y))
+            legend_y += 30
+        
+        # Add some spacing before strategy legend
+        legend_y += 20
+        
+        # Draw Strategy Legend title
+        title = font.render("Strategy Legend", True, (0, 0, 0))
+        self.screen.blit(title, (legend_x, legend_y))
+        legend_y += 30
+        
+        # Draw each strategy with its count
+        for strategy in MovementStrategy:
+            style = self.strategy_styles[strategy]
+            
+            # Draw strategy shape
+            self.draw_shape(
+                self.screen, 
+                style['shape'],
+                (legend_x + 15, legend_y + 10),
+                20, 
+                style['color']
+            )
+            
+            # Create strategy name with count
+            strategy_text = (f"{strategy.name.replace('_', ' ').title()} "
+                            f"({strategy_counts[strategy]})")
+            
+            # Draw text with shadow for better readability
+            shadow = font.render(strategy_text, True, (50, 50, 50))
+            self.screen.blit(shadow, (legend_x + 36, legend_y + 1))
+            text = font.render(strategy_text, True, (0, 0, 0))
+            self.screen.blit(text, (legend_x + 35, legend_y))
+            
+            legend_y += 25
         
     def get_cell_color(self, x: int, y: int, cell_type: CellType) -> Tuple[int, int, int]:
         """
@@ -180,10 +269,12 @@ class ClassroomVisualizer:
             legend_y += 25
 
     def draw_grid(self, classroom: Classroom):
-        """Draw the classroom grid with strategy-specific child representations"""
+        """
+        Draw the classroom grid with support for multiple teachers.
+        """
         self.screen.fill((240, 240, 240))
         
-        # Draw grid cells
+        # Draw base grid
         for y in range(classroom.height):
             for x in range(classroom.width):
                 cell_type = classroom.grid[y][x]
@@ -204,18 +295,27 @@ class ClassroomVisualizer:
                     y * self.cell_size + self.cell_size // 2
                 )
                 
+                # Draw different entities
                 if cell_type == CellType.TEACHER:
+                    # Draw teachers with a distinctive appearance
+                    size = self.cell_size // 3
                     pygame.draw.circle(self.screen, self.colors[CellType.TEACHER], 
-                                    center, self.cell_size // 3)
+                                    center, size)
+                    # Add an inner circle for better visibility
+                    pygame.draw.circle(self.screen, (255, 200, 150), 
+                                    center, size // 2)
+                    
                 elif cell_type == CellType.CHILD:
-                    # Find the child at this position
+                    # Find and draw the child with its strategy-specific appearance
                     for child in classroom.children:
                         if child.position.x == x and child.position.y == y:
                             style = self.strategy_styles[child.strategy]
                             self.draw_shape(self.screen, style['shape'], center,
                                           self.cell_size // 2, style['color'])
                             break
+                            
                 elif cell_type == CellType.CANDY:
+                    # Draw candy
                     size = self.cell_size // 3
                     points = [
                         (center[0], center[1] - size),
@@ -225,31 +325,10 @@ class ClassroomVisualizer:
                     ]
                     pygame.draw.polygon(self.screen, (255, 0, 0), points)
         
-        # Draw legend
-        self.draw_legend()
+        # Draw legend after grid
+        self.draw_right_panel()
 
-    def show_status(self, classroom: Classroom):
-        """
-        Display simulation statistics on screen, now with updated terminology
-        to better reflect the cooldown mechanic.
-        """
-        font = pygame.font.Font(None, 24)
-        
-        # Update how we count children's states
-        active_children = sum(1 for child in classroom.children if child.can_move())
-        on_cooldown = len(classroom.children) - active_children
-        candies = sum(1 for row in classroom.grid for cell in row if cell == CellType.CANDY)
-        
-        # Updated status text with new terminology
-        status_lines = [
-            f"Active Children: {active_children}",
-            f"On Cooldown: {on_cooldown}",
-            f"Candies: {candies}"
-        ]
-        
-        for i, line in enumerate(status_lines):
-            text = font.render(line, True, (0, 0, 0))
-            self.screen.blit(text, (10, 10 + i * 25))
+    
 
     def handle_events(self) -> bool:
         """
@@ -283,7 +362,6 @@ class ClassroomVisualizer:
         
         # Draw everything
         self.draw_grid(classroom)
-        self.show_status(classroom)
         
         # Update display
         pygame.display.flip()
