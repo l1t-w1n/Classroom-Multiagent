@@ -1,6 +1,6 @@
 # Multi-Agent Classroom Simulation
 
-This project implements a complex, reactive multi-agent system simulating the dynamic interactions between teachers and children in a classroom environment. The simulation models a rich scenario where children employ various strategies to move around the classroom collecting candies while teachers work to maintain order by pursuing and capturing the children.
+This project implements a reactive multi-agent system simulating the dynamic interactions between teachers and children in a classroom environment. The simulation models a scenario where children employ various strategies to move around the classroom collecting candies while teachers work to maintain order by pursuing and capturing the children.
 
 ## Features
 
@@ -92,16 +92,6 @@ The simulation's parameters can be extensively customized to experiment with dif
 To customize the simulation, open the `config.ini` file in a text editor, modify the desired parameters, and save the file. The new settings will be applied the next time you run the simulation.
 
 Experimenting with different configurations can lead to interesting emergent behaviors and insights into how various strategies and agent counts affect the classroom dynamics.
-
-### Running Tests
-
-The project includes a suite of unit tests to verify the correctness of the simulation components. These tests cover the major functionalities of the agents, environment, and helper classes. To run the tests, use the following command:
-
-```
-python -m unittest discover tests
-```
-
-All tests should pass if the simulation is working correctly. If any tests fail, it may indicate a bug or regression in the codebase. Please report any issues you encounter.
 
 ## Project Structure
 
