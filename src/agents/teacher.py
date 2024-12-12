@@ -1,5 +1,4 @@
 from typing import List, Optional, Tuple
-import random
 from .base_agent import Agent
 from ..position import Position
 from ..enums import AgentState, CellType, MovementStrategy
@@ -36,7 +35,8 @@ class Teacher(Agent):
             child for child in classroom.children
             if (child.can_move() and 
                 x_min <= child.position.x < x_max and
-                y_min <= child.position.y < y_max)
+                y_min <= child.position.y < y_max and
+                not classroom.is_position_safe_zone(child.position.x, child.position.y))  # Add safe zone check
         ]
 
     def _get_area_center(self, classroom: 'Classroom') -> Position:
@@ -44,26 +44,29 @@ class Teacher(Agent):
         return Position((x_min + x_max) // 2, (y_min + y_max) // 2)
 
     def choose_move(self, classroom: 'Classroom') -> Optional[Position]:
+        # Only get children that are not in the safe zone
         children_in_area = self._find_children_in_area(classroom)
         
-        # Check for any children using strategies from the priority list
-        for strategy in self.STRATEGY_PRIORITY:
-            for child in children_in_area:
-                if child.strategy == strategy:
-                    target = child.position
-                    break
-            else:
-                continue  # No child found for this strategy, continue to the next
-            break  # Found a child, break out of the outer loop
+        # If no valid children are found outside safe zone, patrol area center
+        if not children_in_area:
+            target = self._get_area_center(classroom)
         else:
-            # No children found matching priority strategies
-            # Fall back to targeting the nearest child, if any
-            if children_in_area:
-                target = min(children_in_area, 
-                             key=lambda c: self.position.distance_to(c.position)).position
-            else:
-                # If no children around at all, move towards the area center
-                target = self._get_area_center(classroom)
+            # Find highest priority child that's not in safe zone
+            target_child = None
+            for strategy in self.STRATEGY_PRIORITY:
+                for child in children_in_area:
+                    if child.strategy == strategy:
+                        target_child = child
+                        break
+                if target_child:
+                    break
+            
+            # If no priority children found, target nearest child outside safe zone
+            if not target_child and children_in_area:
+                target_child = min(children_in_area, 
+                                 key=lambda c: self.position.distance_to(c.position))
+            
+            target = target_child.position if target_child else self._get_area_center(classroom)
         
         possible_moves = self._get_valid_moves(classroom)
         if not possible_moves:
@@ -71,7 +74,7 @@ class Teacher(Agent):
             
         # Move towards the chosen target position
         return min(possible_moves,
-                   key=lambda pos: pos.distance_to(target))
+                  key=lambda pos: pos.distance_to(target))
 
     def _get_valid_moves(self, classroom: 'Classroom') -> List[Position]:
         moves = []
@@ -80,6 +83,7 @@ class Teacher(Agent):
             new_y = self.position.y + dy
             if (0 <= new_x < classroom.width and 
                 0 <= new_y < classroom.height and 
-                classroom.grid[new_y][new_x] == CellType.EMPTY):
+                classroom.grid[new_y][new_x] == CellType.EMPTY and
+                not classroom.is_position_safe_zone(new_x, new_y)):  # Add safe zone check
                 moves.append(Position(new_x, new_y))
         return moves
