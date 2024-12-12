@@ -22,6 +22,7 @@ class Teacher(Agent):
     def __init__(self, position: Position, zone: Tuple[int, int, int, int]):
         super().__init__(position)
         self.zone = zone
+        self.child_teleported = 0
 
     def is_adjacent_to(self, other_pos: Position) -> bool:
         dx = abs(self.position.x - other_pos.x)

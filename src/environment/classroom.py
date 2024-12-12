@@ -111,6 +111,7 @@ class Classroom:
                 child.position = nearest_safe
                 self.grid[nearest_safe.y][nearest_safe.x] = CellType.CHILD
                 child.set_cooldown(5.0)
+                teacher.child_teleported += 1
                 return  # Exit after handling one teleportation
 
         # If no teleportation occurred, try to move teacher

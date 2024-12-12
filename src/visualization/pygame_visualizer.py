@@ -116,13 +116,19 @@ class ClassroomVisualizer:
             strategy_counts[child.strategy] += 1
             strategy_candy_counts[child.strategy] += child.candys_eaten
         
-        # Draw main statistics with enhanced visibility
+        # Count children teleported by each teacher
+        teacher_teleport_counts = 0
+        for teacher in self.classroom.teachers:
+            teacher_teleport_counts += teacher.child_teleported
+
+        # You can then use teacher_teleport_counts in your existing stats_lines list
         stats_lines = [
             ("Total Children", len(self.classroom.children)),
             ("Active Children", active_children),
             ("On Cooldown", on_cooldown),
             ("Active Teachers", len(self.classroom.teachers)),
-            ("Current Candies", candies)
+            ("Current Candies", candies),
+            ("Total Teleported Children", teacher_teleport_counts)  # Add this line
         ]
         
         # Draw each statistic line
