@@ -1,0 +1,110 @@
+classDiagram
+    class Agent {
+        +Position position
+        +Position previous_position
+        +move(new_position: Position)
+    }
+
+    class Child {
+        +MovementStrategy strategy
+        +AgentState state
+        +float cooldown_until
+        +float last_move_time
+        +float move_cooldown
+        +int candys_eaten
+        +tuple preferred_direction
+        +MovementStrategy current_substrategy
+        +float strategy_switch_time
+        +choose_move(classroom: Classroom)
+        +set_cooldown(duration: float)
+        +can_move() bool
+        -_get_valid_moves(classroom: Classroom)
+        -_find_safest_move(classroom: Classroom, moves: List[Position])
+        -_find_nearest_candy_move(classroom: Classroom, moves: List[Position])
+        -_find_wall_hugging_move(classroom: Classroom, moves: List[Position])
+        -_find_group_move(classroom: Classroom, moves: List[Position])
+        -_find_candy_rich_area_move(classroom: Classroom, moves: List[Position])
+        -_find_safe_exploration_move(classroom: Classroom, moves: List[Position])
+        -_find_directional_move(moves: List[Position])
+    }
+
+    class Teacher {
+        +tuple zone
+        +int child_teleported
+        +List[MovementStrategy] STRATEGY_PRIORITY
+        +choose_move(classroom: Classroom)
+        +is_adjacent_to(other_pos: Position)
+        -_find_children_in_area(classroom: Classroom)
+        -_get_area_center(classroom: Classroom)
+        -_get_valid_moves(classroom: Classroom)
+    }
+
+    class Classroom {
+        +int width
+        +int height
+        +numpy.ndarray grid
+        +List[Position] safe_zone
+        +List[Child] children
+        +List[Teacher] teachers
+        +float last_candy_spawn
+        +float candy_spawn_interval
+        +update()
+        +spawn_candy()
+        +print_state()
+        +is_position_safe_zone(x: int, y: int)
+        -_initialize_safe_zone(size: Tuple)
+        -_process_teacher_movement(teacher: Teacher)
+    }
+
+    class ConfigManager {
+        +ConfigParser config
+        +Path config_file
+        +classroom_size: Tuple
+        +safe_zone_size: Tuple
+        +agent_counts: Dict
+        +fps: int
+        +candy_spawn_interval: int
+        +child_cooldown: float
+        +strategic_timing_range: Tuple
+        +cell_size: int
+        +save_config()
+        -_set_defaults()
+    }
+
+    class ClassroomVisualizer {
+        +Classroom classroom
+        +int cell_size
+        +int grid_width
+        +int legend_width
+        +int width
+        +int height
+        +pygame.Surface screen
+        +Dict colors
+        +Dict strategy_styles
+        +ConfigManager config
+        +pygame.time.Clock clock
+        +int FPS
+        +update(classroom: Classroom)
+        +cleanup()
+        -draw_grid(classroom: Classroom)
+        -draw_right_panel()
+        -draw_shape(surface, shape, center, size, color)
+        -get_cell_color(x: int, y: int, cell_type: CellType)
+        -handle_events()
+    }
+
+    class Position {
+        +int x
+        +int y
+        +distance_to(other: Position)
+    }
+
+    Agent <|-- Child
+    Agent <|-- Teacher
+    Classroom *-- Child
+    Classroom *-- Teacher
+    Classroom *-- Position
+    ClassroomVisualizer *-- Classroom
+    ClassroomVisualizer *-- ConfigManager
+    Child *-- Position
+    Teacher *-- Position
