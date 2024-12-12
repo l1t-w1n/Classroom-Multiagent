@@ -18,7 +18,7 @@ class ClassroomVisualizer:
         self.grid_width = classroom.width * cell_size
         
         # Increase legend width to accommodate additional information
-        self.legend_width = 250  # Made wider for teacher count
+        self.legend_width = 350  # Made wider for teacher count
         self.width = self.grid_width + self.legend_width
         self.height = max(classroom.height * cell_size, 400)
         
@@ -86,8 +86,8 @@ class ClassroomVisualizer:
         Draws the complete right panel including status counters and strategy legend.
         Organizes information in a clear, hierarchical way.
         """
-        legend_x = self.grid_width + 10
-        legend_y = 10
+        legend_x = self.grid_width +10
+        legend_y = 20
         font = pygame.font.Font(None, 24)
         
         # First, draw a panel background for better visibility
@@ -105,12 +105,16 @@ class ClassroomVisualizer:
         candies = sum(1 for row in self.classroom.grid 
                     for cell in row if cell == CellType.CANDY)
         
-        # Count children by strategy
+        # Count children and candies by strategy
         strategy_counts = {}
+        strategy_candy_counts = {}
         for strategy in MovementStrategy:
             strategy_counts[strategy] = 0
+            strategy_candy_counts[strategy] = 0
+        
         for child in self.classroom.children:
             strategy_counts[child.strategy] += 1
+            strategy_candy_counts[child.strategy] += child.candys_eaten
         
         # Draw main statistics with enhanced visibility
         stats_lines = [
@@ -124,8 +128,8 @@ class ClassroomVisualizer:
         # Draw each statistic line
         for label, value in stats_lines:
             # Draw background highlight for better readability
-            highlight_rect = pygame.Rect(legend_x - 5, legend_y - 2, 
-                                    self.legend_width - 10, 25)
+            highlight_rect = pygame.Rect(legend_x - 5, legend_y - 2,
+                                        self.legend_width - 10, 25)
             pygame.draw.rect(self.screen, (200, 200, 200), highlight_rect)
             
             # Draw the statistics text
@@ -141,22 +145,23 @@ class ClassroomVisualizer:
         self.screen.blit(title, (legend_x, legend_y))
         legend_y += 30
         
-        # Draw each strategy with its count
+        # Draw each strategy with its count and candies eaten
         for strategy in MovementStrategy:
             style = self.strategy_styles[strategy]
             
             # Draw strategy shape
             self.draw_shape(
-                self.screen, 
+                self.screen,
                 style['shape'],
                 (legend_x + 15, legend_y + 10),
-                20, 
+                20,
                 style['color']
             )
             
-            # Create strategy name with count
-            strategy_text = (f"{strategy.name.replace('_', ' ').title()} "
-                            f"({strategy_counts[strategy]})")
+            # Create strategy name with count and candies eaten
+            strategy_text = (f"{strategy.name.replace('_', ' ').title()}"
+                            f"(Count: {strategy_counts[strategy]}, "
+                            f"Candies: {strategy_candy_counts[strategy]})")
             
             # Draw text with shadow for better readability
             shadow = font.render(strategy_text, True, (50, 50, 50))
@@ -165,7 +170,7 @@ class ClassroomVisualizer:
             self.screen.blit(text, (legend_x + 35, legend_y))
             
             legend_y += 25
-        
+                
     def get_cell_color(self, x: int, y: int, cell_type: CellType) -> Tuple[int, int, int]:
         """
         Determines the color for a cell based on its type and position.

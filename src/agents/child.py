@@ -17,6 +17,7 @@ class Child(Agent):
         self.cooldown_until = 0
         self.last_move_time = time.time()
         self.move_cooldown = random.uniform(0.5, 2.0)
+        self.candys_eaten = 0
         
         # For directional bias strategy
         self.preferred_direction = random.choice([(0, 1), (1, 0), (0, -1), (-1, 0)])

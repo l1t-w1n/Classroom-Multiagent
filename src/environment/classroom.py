@@ -150,6 +150,7 @@ class Classroom:
                     # Handle candy collection if moving to candy cell
                     if self.grid[new_position.y][new_position.x] == CellType.CANDY:
                         self.grid[new_position.y][new_position.x] = CellType.EMPTY
+                        child.candys_eaten += 1  # Increment the candy count for the child
                     
                     # Update child's position while preserving safe zone
                     old_x, old_y = child.position.x, child.position.y
@@ -162,7 +163,7 @@ class Classroom:
         # Second movement opportunity for all teachers
         for teacher in self.teachers:
             self._process_teacher_movement(teacher)
-
+            
     def print_state(self):
         """
         Prints a text representation of the current classroom state.
