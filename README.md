@@ -1,100 +1,84 @@
-# Reactive Multi-Agent System in a Classroom Environment
+# Multi-Agent Classroom Simulation
 
-This project implements a multi-agent simulation modeling the interactions between teachers and children in a structured classroom environment. The simulation creates an engaging scenario where children attempt to collect candies while avoiding the teacher, who tries to maintain order by returning children to a designated safe zone.
+This project implements a complex, reactive multi-agent system simulating the interactions between teachers and children in a classroom environment. The simulation models a scenario where children strategically move around the classroom collecting candies while avoiding teachers who work to maintain order.
 
-## Project Overview
+## Features
 
-The simulation takes place in a grid-based classroom environment where two types of agents—Teacher and Child—interact within discrete sections. The environment features dynamic elements such as randomly spawning candies and a designated safe zone near the teacher's desk.
+- **Grid-based environment**: The classroom is represented by a configurable 2D grid where each cell can be empty, contain an agent (teacher or child), a candy, or be part of the designated "safe zone."
 
-### Environment Components
+- **Multiple agent types**:
 
-#### Classroom Grid
-The classroom is represented as a configurable grid (e.g., 10x10 cells) where each cell can contain:
-- An agent (Teacher or Child)
-- A candy
-- Part of the safe zone
-- Empty space
+  - _Children_ are reactive agents employing various movement strategies to collect candies while avoiding teachers. Strategies include strategic timing, teacher avoidance, directional bias, random walking, and active candy seeking.
+  - _Teachers_ are control agents tasked with maintaining order. They pursue and capture children, returning them to the safe zone. Teachers can target the nearest child, patrol high-candy areas, or follow predefined paths.
 
-#### Safe Zone
-- Located near the teacher's desk
-- Serves as the initial spawn point for all agents
-- Functions as a return point for captured children
-- Clearly marked area in the grid
+- **Candy spawning system**: Candies appear periodically at random locations (excluding the safe zone). Children collect candies by moving onto the candy's cell.
 
-#### Candy System
-- Candies spawn randomly throughout the grid
-- Spawn locations exclude the safe zone
-- Multiple candies can exist simultaneously
-- Children can collect candies by moving onto their cell
+- **Safe zone mechanic**: Located near the teacher's desk, the safe zone serves as the initial spawn point and return location for captured children. It provides a temporary reprieve from the teacher's pursuit.
 
-### Agent Behaviors
+- **Realistic agent interactions**: Teachers capture children by making contact in an adjacent cell. Captured children are escorted back to the safe zone and are unable to collect candies until they return to the safe zone and regain their freedom.
 
-#### Children (Reactive Agents)
-Children employ various movement strategies to collect candies while avoiding the teacher:
+- **Configurable simulation parameters**: The simulation offers a wide array of adjustable settings, including grid size, candy spawn intervals, agent speeds and counts, and more. These can be tweaked in the `config.ini` file.
 
-1. Strategic Timing
-   - Movement occurs at calculated intervals
-   - Creates unpredictable patterns
+## Getting Started
 
-2. Avoidance
-   - Maintains maximum possible distance from the teacher
-   - Prioritizes safety over candy collection
+### Prerequisites
 
-3. Directional Bias
-   - Shows preference for specific movement directions
-   - Creates predictable but potentially effective patterns
+- Python 3.8 or higher
+- pip package manager
 
-4. Random Walk
-   - Chooses moves randomly from available options
-   - Unpredictable movement patterns
+### Installation
 
-5. Candy Seeker
-   - Actively pursues the nearest candy
-   - Disregards teacher proximity
+1. Clone the repository:
 
-Children can exist in two states:
-- Free: Actively moving and collecting candies
-- Captured: Being escorted back to the safe zone by the teacher
+   ```
+   git clone https://github.com/username/classroom-simulation.git
+   cd classroom-simulation
+   ```
 
-#### Teacher (Control Agent)
-The teacher's primary objective is maintaining classroom order:
-- Pursues and captures free children
-- Escorts captured children back to the safe zone
-- Uses strategic movement patterns to maximize effectiveness
-- Can employ different patrol strategies
-  - Target nearest child
-  - Patrol high-candy-density areas
-  - Follow predefined paths
+2. (Optional) Create a virtual environment:
 
-### System Dynamics
+   ```
+   python -m venv venv
+   source venv/bin/activate  # For Unix/MacOS
+   .\venv\Scripts\activate   # For Windows
+   ```
 
-#### Movement Rules
-- Agents move one cell at a time
-- Movement must stay within grid boundaries
-- No diagonal movement allowed
-- No cell can contain multiple agents
+3. Install the required dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-#### Candy Mechanics
-- Periodic random spawning (configurable interval)
-- Spawn locations exclude safe zone and occupied cells
-- Instant collection upon child contact
-- Disappear after collection
+### Running the Simulation
 
-#### Agent Interactions
-- Teacher catches child upon adjacent cell contact
-- Captured children are escorted to safe zone
-- Children return to free state in safe zone
-- Children cannot collect candy while captured
+To start the classroom simulation with the default configuration, simply run:
 
-## Technical Implementation
-
-### Requirements
-- Python 3.8+
-- NumPy (for grid operations)
-
-### Project Structure
 ```
-project_classroom_py/
+python main.py
+```
+
+The simulation will begin running in your terminal, displaying the current state of the classroom grid and relevant statistics.
+
+### Customizing the Simulation
+
+Simulation parameters can be adjusted by modifying the `config.ini` file. Here you can change settings like the classroom dimensions, number and types of agents, candy spawn rates, and more. Be sure to save the file after making changes.
+
+### Running Tests
+
+A suite of unit tests is provided to ensure the various components of the simulation are functioning as expected. To run the tests, use:
+
+```
+python -m unittest discover tests
+```
+
+All tests should pass if the simulation is working correctly.
+
+## Project Structure
+
+The project is organized as follows:
+
+```
+classroom-simulation/
+│
 ├── src/
 │   ├── agents/
 │   │   ├── base_agent.py
@@ -104,52 +88,28 @@ project_classroom_py/
 │   │   └── classroom.py
 │   ├── enums.py
 │   └── position.py
+│
 ├── tests/
+│   ├── test_agents.py
+│   ├── test_classroom.py
+│   └── test_position.py
+│
+├── config.ini
 ├── main.py
 └── requirements.txt
 ```
 
-### Setup and Running
+- The `src` directory contains the main components of the simulation.
 
-1. Create and activate virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-.\venv\Scripts\activate   # Windows
-```
+  - `agents` contains the implementation of the teacher and child agents.
+  - `environment` contains the classroom grid implementation.
+  - `enums.py` defines useful enumerations for agent states and cell types.
+  - `position.py` provides a helpful abstraction for representing positions in the grid.
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+- The `tests` directory contains unit tests for the various simulation components.
 
-3. Run simulation:
-```bash
-python main.py
-```
+- `config.ini` is the configuration file for adjusting simulation parameters.
 
-### Configuration
-The simulation offers several configurable parameters:
-- Grid dimensions
-- Safe zone size
-- Candy spawn interval
-- Agent movement speeds
-- Number of agents
-- Movement strategies
+- `main.py` is the entry point of the program and runs the main simulation loop.
 
-### Testing
-Run the test suite:
-```bash
-python -m unittest discover tests
-```
-
-## Contributing
-
-Feel free to contribute to this project by:
-- Implementing new movement strategies
-- Adding visualization improvements
-- Enhancing agent behaviors
-- Optimizing performance
-- Adding new features
-
-Please follow the existing code style and include appropriate tests for new features.
+- `requirements.txt` lists the Python dependencies required by the project.

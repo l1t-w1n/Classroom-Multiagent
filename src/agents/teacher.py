@@ -2,9 +2,23 @@ from typing import List, Optional, Tuple
 import random
 from .base_agent import Agent
 from ..position import Position
-from ..enums import AgentState, CellType
+from ..enums import AgentState, CellType, MovementStrategy
 
 class Teacher(Agent):
+    # Define the strategy priority list
+    STRATEGY_PRIORITY = [
+        MovementStrategy.AVOIDANCE,
+        MovementStrategy.WALL_HUGGER,
+        MovementStrategy.CANDY_HOARDER,
+        MovementStrategy.STRATEGIC_TIMING,
+        MovementStrategy.DIRECTIONAL_BIAS,
+        MovementStrategy.GROUP_SEEKER,
+        MovementStrategy.SAFE_EXPLORER,
+        MovementStrategy.CANDY_SEEKER,
+        MovementStrategy.RANDOM_WALK,
+        MovementStrategy.UNPREDICTABLE
+    ]
+
     def __init__(self, position: Position, zone: Tuple[int, int, int, int]):
         super().__init__(position)
         self.zone = zone
@@ -31,25 +45,32 @@ class Teacher(Agent):
     def choose_move(self, classroom: 'Classroom') -> Optional[Position]:
         children_in_area = self._find_children_in_area(classroom)
         
-        if not children_in_area and random.random() < 0.1:
-            children_in_area = [
-                child for child in classroom.children
-                if child.can_move()
-            ]
-        
-        if children_in_area:
-            nearest_child = min(children_in_area, 
-                              key=lambda c: self.position.distance_to(c.position))
-            target = nearest_child.position
+        # Check for any children using strategies from the priority list
+        for strategy in self.STRATEGY_PRIORITY:
+            for child in children_in_area:
+                if child.strategy == strategy:
+                    target = child.position
+                    break
+            else:
+                continue  # No child found for this strategy, continue to the next
+            break  # Found a child, break out of the outer loop
         else:
-            target = self._get_area_center(classroom)
+            # No children found matching priority strategies
+            # Fall back to targeting the nearest child, if any
+            if children_in_area:
+                target = min(children_in_area, 
+                             key=lambda c: self.position.distance_to(c.position)).position
+            else:
+                # If no children around at all, move towards the area center
+                target = self._get_area_center(classroom)
         
         possible_moves = self._get_valid_moves(classroom)
         if not possible_moves:
             return None
             
+        # Move towards the chosen target position
         return min(possible_moves,
-                  key=lambda pos: pos.distance_to(target))
+                   key=lambda pos: pos.distance_to(target))
 
     def _get_valid_moves(self, classroom: 'Classroom') -> List[Position]:
         moves = []
