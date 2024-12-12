@@ -1,9 +1,3 @@
 # Core dependencies
 numpy
 pygame
-
-# Testing
-unittest
-
-# Configuration
-configparser

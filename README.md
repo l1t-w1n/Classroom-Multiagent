@@ -51,7 +51,7 @@ This project implements a reactive multi-agent system simulating the dynamic int
 
    ```
    git clone https://github.com/l1t-w1n/Classroom-Multiagent.git
-   cd classroom-multiagent
+   cd Classroom-Multiagent
    ```
 
 2. (Optional) Create a virtual environment:
