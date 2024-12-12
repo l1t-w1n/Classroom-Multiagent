@@ -1,0 +1,77 @@
+classDiagram
+    class Agent {
+        +Position position
+        +Position previous_position
+    }
+
+    class Child {
+        +MovementStrategy strategy
+        +AgentState state
+        +float cooldown_until
+        +float last_move_time
+        +float move_cooldown
+        +int candys_eaten
+        +tuple preferred_direction
+        +MovementStrategy current_substrategy
+        +float strategy_switch_time
+    }
+
+    class Teacher {
+        +tuple zone
+        +int child_teleported
+        +List[MovementStrategy] STRATEGY_PRIORITY
+    }
+
+    class Classroom {
+        +int width
+        +int height
+        +numpy.ndarray grid
+        +List[Position] safe_zone
+        +List[Child] children
+        +List[Teacher] teachers
+        +float last_candy_spawn
+        +float candy_spawn_interval
+    }
+
+    class ConfigManager {
+        +ConfigParser config
+        +Path config_file
+        +Tuple classroom_size
+        +Tuple safe_zone_size
+        +Dict agent_counts
+        +int fps
+        +int candy_spawn_interval
+        +float child_cooldown
+        +Tuple strategic_timing_range
+        +int cell_size
+    }
+
+    class ClassroomVisualizer {
+        +Classroom classroom
+        +int cell_size
+        +int grid_width
+        +int legend_width
+        +int width
+        +int height
+        +pygame.Surface screen
+        +Dict colors
+        +Dict strategy_styles
+        +ConfigManager config
+        +pygame.time.Clock clock
+        +int FPS
+    }
+
+    class Position {
+        +int x
+        +int y
+    }
+
+    Agent <|-- Child
+    Agent <|-- Teacher
+    Classroom *-- Child
+    Classroom *-- Teacher
+    Classroom *-- Position
+    ClassroomVisualizer *-- Classroom
+    ClassroomVisualizer *-- ConfigManager
+    Child *-- Position
+    Teacher *-- Position
