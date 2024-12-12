@@ -1,0 +1,95 @@
+graph TD
+    subgraph Random Walk
+        RW[Start] --> |Random| RW1((1))
+        RW1 --> |Random| RW2((2))
+        RW2 --> |Random| RW3((3))
+        RW3 --> |Random| RW4((4))
+        style RW1 fill:#87CEEB
+        style RW2 fill:#87CEEB
+        style RW3 fill:#87CEEB
+        style RW4 fill:#87CEEB
+    end
+
+    subgraph Candy Seeker
+        CS[Start] --> |Detect| CS1((Candy))
+        CS1 --> |Direct Path| CS2((Candy))
+        CS2 --> |Direct Path| CS3((Candy))
+        style CS1 fill:#FFB6C1
+        style CS2 fill:#FFB6C1
+        style CS3 fill:#FFB6C1
+    end
+
+    subgraph Teacher Avoidance
+        TA[Child] --> |Detect| TA1{Teacher}
+        TA1 --> |Move Away| TA2((Safe))
+        TA2 --> |Check| TA3{Clear?}
+        TA3 --> |Yes| TA4((Move))
+        style TA1 fill:#FF6B6B
+        style TA2 fill:#98FB98
+        style TA4 fill:#98FB98
+    end
+
+    subgraph Wall Hugger
+        WH[Start] --> WH1((Wall))
+        WH1 --> |Follow| WH2((Corner))
+        WH2 --> |Follow| WH3((Wall))
+        style WH1 fill:#DEB887
+        style WH2 fill:#DEB887
+        style WH3 fill:#DEB887
+    end
+
+    subgraph Group Seeker
+        GS[Child] --> |Detect| GS1((Group))
+        GS1 --> |Join| GS2((Stay))
+        GS2 --> |Move Together| GS3((New Position))
+        style GS1 fill:#4682B4
+        style GS2 fill:#4682B4
+        style GS3 fill:#4682B4
+    end
+
+    subgraph Candy Hoarder
+        CH[Start] --> |Scan| CH1{High Candy Area}
+        CH1 --> |Move to| CH2((Collect))
+        CH2 --> |Stay| CH3((Collect More))
+        style CH1 fill:#FF7F50
+        style CH2 fill:#FF7F50
+        style CH3 fill:#FF7F50
+    end
+
+    subgraph Safe Explorer
+        SE[Safe Zone] --> |Explore| SE1((Venture))
+        SE1 --> |Check Risk| SE2{Danger?}
+        SE2 --> |Yes| SE3((Return))
+        SE2 --> |No| SE4((Continue))
+        style SE1 fill:#9370DB
+        style SE3 fill:#9370DB
+        style SE4 fill:#9370DB
+    end
+
+    subgraph Directional Bias
+        DB[Start] --> |Prefer| DB1((North))
+        DB1 --> |Prefer| DB2((North))
+        DB2 --> |Adjust| DB3((Northeast))
+        style DB1 fill:#DDA0DD
+        style DB2 fill:#DDA0DD
+        style DB3 fill:#DDA0DD
+    end
+
+    subgraph Strategic Timing
+        ST[Wait] --> |Calculate| ST1{Safe?}
+        ST1 --> |Yes| ST2((Quick Move))
+        ST2 --> |Wait| ST3((Hide))
+        style ST1 fill:#FFD700
+        style ST2 fill:#FFD700
+        style ST3 fill:#FFD700
+    end
+
+    subgraph Unpredictable
+        UP[Strategy 1] --> |Switch| UP1((Strategy 2))
+        UP1 --> |Switch| UP2((Strategy 3))
+        UP2 --> |Switch| UP3((Strategy 1))
+        style UP1 fill:#A9A9A9
+        style UP2 fill:#A9A9A9
+        style UP3 fill:#A9A9A9
+    end
+
